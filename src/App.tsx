@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Role, Team, SystemHealth, Enigma, Incident, RadioMessage, SafetyCheckItem, SafetyIncidentLog } from './types';
+import {
+  Role,
+  Team,
+  SystemHealth,
+  Enigma,
+  Incident,
+  RadioMessage,
+  SafetyCheckItem,
+  SafetyIncidentLog,
+  RandomEvent,
+  RandomEventSettings
+} from './types';
 import {
   INITIAL_PHASES,
   INITIAL_TEAMS,
@@ -7,7 +18,9 @@ import {
   INITIAL_ENIGMAS,
   SAMPLE_INCIDENTS,
   INITIAL_SAFETY_CHECKLIST,
-  INITIAL_SAFETY_LOGS
+  INITIAL_SAFETY_LOGS,
+  CATALOGUE_RANDOM_EVENTS,
+  DEFAULT_RANDOM_EVENT_SETTINGS
 } from './lib/data';
 import { Header } from './components/Header';
 import { PhaseBar } from './components/PhaseBar';
@@ -20,6 +33,7 @@ import { SafetyDashboard } from './components/SafetyDashboard';
 import { EnigmaModal } from './components/EnigmaModal';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { IncidentModal } from './components/IncidentModal';
+import { RandomEventOverlay } from './components/RandomEventOverlay';
 import { soundEngine } from './lib/audio';
 
 export default function App() {
@@ -31,6 +45,12 @@ export default function App() {
   const [incidents, setIncidents] = useState<Incident[]>(SAMPLE_INCIDENTS);
   const [safetyChecklist, setSafetyChecklist] = useState<SafetyCheckItem[]>(INITIAL_SAFETY_CHECKLIST);
   const [safetyLogs, setSafetyLogs] = useState<SafetyIncidentLog[]>(INITIAL_SAFETY_LOGS);
+
+  // Dynamic Random Events System State
+  const [randomEventSettings, setRandomEventSettings] = useState<RandomEventSettings>(DEFAULT_RANDOM_EVENT_SETTINGS);
+  const [activeRandomEvents, setActiveRandomEvents] = useState<RandomEvent[]>([]);
+  const [randomEventHistory, setRandomEventHistory] = useState<RandomEvent[]>([]);
+
 
   // Telemetry metrics
   const [altitudeKm, setAltitudeKm] = useState(42.5);
@@ -82,6 +102,142 @@ export default function App() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isCountdownRunning]);
+
+  // Trigger a random event or specific catalogue event
+  const handleTriggerRandomEvent = (eventId?: string) => {
+    let template = CATALOGUE_RANDOM_EVENTS.find((e) => e.id === eventId);
+
+    if (!template) {
+      // Pick a random event filtered by selected categories
+      const eligible = CATALOGUE_RANDOM_EVENTS.filter((e) =>
+        randomEventSettings.selectedCategories.includes(e.category)
+      );
+      if (eligible.length === 0) return;
+      template = eligible[Math.floor(Math.random() * eligible.length)];
+    }
+
+    const nowStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const newEvent: RandomEvent = {
+      ...template,
+      id: `EVT-ACT-${Date.now().toString().slice(-4)}`,
+      remainingSeconds: template.durationSeconds,
+      active: true,
+      timestamp: nowStr,
+      resolved: false,
+      triggeredBy: eventId ? 'manual' : 'auto'
+    };
+
+    // Play appropriate sound effect
+    if (newEvent.category === 'discovery') {
+      soundEngine.playSuccess();
+    } else {
+      soundEngine.playAlarm();
+    }
+
+    // Add radio comm message
+    const commMsgText = newEvent.category === 'discovery'
+      ? `💎 DÉCOUVERTE SPATIALE : ${newEvent.title} - ${newEvent.impact}`
+      : `⚠️ ÉVÉNEMENT ALÉATOIRE : ${newEvent.title} - ${newEvent.impact}`;
+
+    const newMsg: RadioMessage = {
+      id: `m-${Date.now()}`,
+      timestamp: nowStr,
+      type: newEvent.category === 'discovery' ? 'comm-tx' : 'comm-warn',
+      icon: newEvent.icon,
+      sender: 'SYSTÈME',
+      text: commMsgText
+    };
+    setRadioComms((prev) => [newMsg, ...prev]);
+
+    // Apply score bonus if positive discovery event
+    if (newEvent.scoreBonus && newEvent.scoreBonus > 0) {
+      setTeams((prev) =>
+        prev.map((t) => {
+          if (
+            newEvent.targetTeams === 'all' ||
+            (Array.isArray(newEvent.targetTeams) && newEvent.targetTeams.includes(t.id))
+          ) {
+            return { ...t, score: t.score + newEvent.scoreBonus! };
+          }
+          return t;
+        })
+      );
+    }
+
+    setActiveRandomEvents((prev) => [newEvent, ...prev]);
+    setRandomEventHistory((prev) => [newEvent, ...prev]);
+    setRandomEventSettings((prev) => ({ ...prev, autoTriggerCount: prev.autoTriggerCount + 1 }));
+  };
+
+  // Resolve / mitigate an active event
+  const handleResolveRandomEvent = (eventId: string) => {
+    soundEngine.playSuccess();
+    const evt = activeRandomEvents.find((e) => e.id === eventId);
+
+    setActiveRandomEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, resolved: true, active: false } : e))
+    );
+    setRandomEventHistory((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, resolved: true } : e))
+    );
+
+    if (evt) {
+      const nowStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const newMsg: RadioMessage = {
+        id: `m-${Date.now()}`,
+        timestamp: nowStr,
+        type: 'comm-tx',
+        icon: '✓',
+        sender: 'MISSION CTRL',
+        text: `✓ Événement "${evt.title}" résolu / atténué avec succès par l'équipage.`
+      };
+      setRadioComms((prev) => [newMsg, ...prev]);
+    }
+  };
+
+  // Active Events Timer Loop
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveRandomEvents((prev) =>
+        prev.map((evt) => {
+          if (evt.resolved || evt.durationSeconds <= 0) return evt;
+          if (evt.remainingSeconds <= 1) {
+            soundEngine.playSuccess();
+            return { ...evt, remainingSeconds: 0, resolved: true, active: false };
+          }
+          return { ...evt, remainingSeconds: evt.remainingSeconds - 1 };
+        })
+      );
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Interval for automatic random event generation
+  useEffect(() => {
+    if (!randomEventSettings.enabled || randomEventSettings.frequency === 'off') return;
+
+    const intervalMs =
+      randomEventSettings.frequency === 'high'
+        ? 20000
+        : randomEventSettings.frequency === 'medium'
+        ? 40000
+        : 80000;
+
+    const timer = setInterval(() => {
+      if (Math.random() < 0.65) {
+        handleTriggerRandomEvent();
+      }
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [
+    randomEventSettings.enabled,
+    randomEventSettings.frequency,
+    randomEventSettings.selectedCategories,
+    randomEventSettings.intensity
+  ]);
+
 
   const handleSendMessage = (sender: string, text: string) => {
     const newMsg: RadioMessage = {
@@ -223,6 +379,12 @@ export default function App() {
           onSelectPhase={(id) => setCurrentPhaseId(id)}
         />
 
+        {/* Dynamic Random Events Overlay & Environmental FX */}
+        <RandomEventOverlay
+          activeEvents={activeRandomEvents}
+          onResolveEvent={handleResolveRandomEvent}
+        />
+
         {/* Dashboard Views Routing */}
         <main className="transition-all duration-300">
           {activeRole === 'control' && (
@@ -257,8 +419,18 @@ export default function App() {
               onToggleEnigmaUnlock={handleToggleEnigmaUnlock}
               onTriggerIncident={handleTriggerRandomIncident}
               onSendHintToRadio={(hint) => handleSendMessage('ANIMATEUR', hint)}
+              randomEventSettings={randomEventSettings}
+              activeRandomEvents={activeRandomEvents}
+              randomEventHistory={randomEventHistory}
+              onUpdateRandomEventSettings={(newSettings) =>
+                setRandomEventSettings((prev) => ({ ...prev, ...newSettings }))
+              }
+              onTriggerRandomEvent={handleTriggerRandomEvent}
+              onResolveRandomEvent={handleResolveRandomEvent}
+              onClearRandomEventHistory={() => setRandomEventHistory([])}
             />
           )}
+
 
           {activeRole === 'safety' && (
             <SafetyDashboard

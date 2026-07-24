@@ -1,4 +1,15 @@
-import { MissionPhase, Team, SystemHealth, Enigma, Incident, SafetyCheckItem, SafetyIncidentLog } from '../types';
+import {
+  MissionPhase,
+  Team,
+  SystemHealth,
+  Enigma,
+  Incident,
+  SafetyCheckItem,
+  SafetyIncidentLog,
+  RandomEvent,
+  RandomEventSettings
+} from '../types';
+
 
 export const INITIAL_PHASES: MissionPhase[] = [
   { id: 1, icon: '📋', label: 'Briefing', desc: 'Constitution des 4 équipes, cahier des charges et rôle Asteria-3', durationMin: 10 },
@@ -273,3 +284,143 @@ export const INITIAL_SAFETY_LOGS: SafetyIncidentLog[] = [
     correctiveAction: 'Dépoussiérage à l\'air comprimé et lubrification de l\'engrenage.'
   }
 ];
+
+export const CATALOGUE_RANDOM_EVENTS: Omit<RandomEvent, 'active' | 'remainingSeconds' | 'timestamp' | 'resolved' | 'triggeredBy'>[] = [
+  {
+    id: 'EVT-DUST-01',
+    title: 'Tempête de Poussière Électrostatique',
+    icon: '🌫️',
+    category: 'environment',
+    severity: 'moderate',
+    description: 'Une micro-tempête de régolithe lunaire en suspension diminue la visibilité optique des capteurs du Rover et perturbe la télémétrie.',
+    impact: 'Visibilité caméras -80% & interférences sur le radar optique',
+    effectCode: 'dust_storm',
+    targetTeams: ['delta', 'alpha'],
+    durationSeconds: 45,
+    mitigationAction: 'Basculer les caméras en mode Infrarouge & Activer le balayage radar',
+    mitigationCost: 'Résolution manuelle par Équipe Delta'
+  },
+  {
+    id: 'EVT-POWER-02',
+    title: 'Pannes de Courant Intermittentes',
+    icon: '⚡',
+    category: 'system',
+    severity: 'critical',
+    description: 'Oscillation de charge du bus d\'alimentation 28V DC causant des clignotements d\'écrans et un sous-voltage temporaire.',
+    impact: 'Fluctuation de l\'affichage & baisse de puissance systèmes de 35%',
+    effectCode: 'power_flicker',
+    targetTeams: ['beta', 'alpha'],
+    durationSeconds: 35,
+    mitigationAction: 'Basculer l\'alimentation sur la batterie Li-Po de secours',
+    mitigationCost: 'Intervention Équipe Beta'
+  },
+  {
+    id: 'EVT-RADIO-03',
+    title: 'Messages Radio Corrompus',
+    icon: '📻',
+    category: 'communication',
+    severity: 'minor',
+    description: 'Bruit thermique atmosphérique et ionique provoquant un hachage des communications radio et des symboles parasites dans les logs.',
+    impact: 'Signal radio distordu & hachage du journal de transmission',
+    effectCode: 'radio_corrupt',
+    targetTeams: 'all',
+    durationSeconds: 40,
+    mitigationAction: 'Recalibrer la sous-bande VHF 433 MHz',
+    mitigationCost: 'Action radio Équipe Alpha'
+  },
+  {
+    id: 'EVT-SENSOR-04',
+    title: 'Défaillance de Capteur IMU Critiques',
+    icon: '🧭',
+    category: 'system',
+    severity: 'moderate',
+    description: 'L\'accéléromètre triaxial de la centrale inertielle dérive suite aux micro-vibrations du système de réaction.',
+    impact: 'Calculs de tangage/roulis faussés de ±12°',
+    effectCode: 'sensor_failure',
+    targetTeams: ['gamma', 'beta'],
+    durationSeconds: 50,
+    mitigationAction: 'Exécuter un reset et calibrage du zéro gyroscopique',
+    mitigationCost: 'Commande GNC Équipe Gamma'
+  },
+  {
+    id: 'EVT-DISC-05',
+    title: 'Découverte : Gisement d\'Eau Glacée',
+    icon: '❄️',
+    category: 'discovery',
+    severity: 'info',
+    description: 'Le spectromètre de neutrons du Rover détecte une concentration anormale d\'hydrogène sous le régolithe du cratère !',
+    impact: 'Découverte majeure ! +150 Points de mission accordés',
+    effectCode: 'lunar_discovery',
+    targetTeams: ['delta', 'alpha'],
+    durationSeconds: 0,
+    scoreBonus: 150,
+    mitigationAction: 'Enregistrer la coordonnée GPS lunaire dans le journal',
+    mitigationCost: 'Bonus instantané'
+  },
+  {
+    id: 'EVT-SOLAR-06',
+    title: 'Surchauffe & Éruption Solaire',
+    icon: '☀️',
+    category: 'environment',
+    severity: 'critical',
+    description: 'Un pic de rayonnement cosmique et de vent solaire provoque une élévation thermique brutale sur les panneaux solaires.',
+    impact: 'Alerte thermique radiateurs & interruption des signaux faibles',
+    effectCode: 'solar_flare',
+    targetTeams: 'all',
+    durationSeconds: 45,
+    mitigationAction: 'Orienter les déflecteurs thermiques contre le vent solaire',
+    mitigationCost: 'Coordination générale'
+  },
+  {
+    id: 'EVT-GRAV-07',
+    title: 'Anomalie Gravitationnelle Locale (Mascon)',
+    icon: '🌌',
+    category: 'environment',
+    severity: 'moderate',
+    description: 'Le module traverse une zone de surdensité de masse lunaire provoquant une infime déviation du profil d\'alunissage.',
+    impact: 'Perturbation de la trajectoire de descente Δv',
+    effectCode: 'gravity_anomaly',
+    targetTeams: ['gamma'],
+    durationSeconds: 40,
+    mitigationAction: 'Ajuster le coefficient g_lune dans le calculateur de vol',
+    mitigationCost: 'Recalcul Équipe Gamma'
+  },
+  {
+    id: 'EVT-DISC-08',
+    title: 'Découverte : Rétro-Réflecteur Historique Apollo',
+    icon: '🛰️',
+    category: 'discovery',
+    severity: 'info',
+    description: 'Visuel confirmé sur la caméra optique : récepteur optique d\'une ancienne mission spatiale identifié intact sur le sol !',
+    impact: 'Découverte scientifique exceptionnelle ! +200 Points',
+    effectCode: 'lunar_discovery',
+    targetTeams: ['delta', 'beta'],
+    durationSeconds: 0,
+    scoreBonus: 200,
+    mitigationAction: 'Rapporter l\'image haute définition au Centre de Contrôle',
+    mitigationCost: 'Bonus instantané'
+  },
+  {
+    id: 'EVT-HYD-09',
+    title: 'Pression Hydraulique Tuyère Instable',
+    icon: '🛢️',
+    category: 'system',
+    severity: 'moderate',
+    description: 'Cavitation intermittente dans la conduite de fluide de la tuyère de stabilisation secondaire.',
+    impact: 'Poussée réacteur instable sur l\'axe de lacet',
+    effectCode: 'hydraulics_glitch',
+    targetTeams: ['beta', 'gamma'],
+    durationSeconds: 45,
+    mitigationAction: 'Purger la vanne d\'injection secondaire et stabiliser la pression',
+    mitigationCost: 'Purge Équipe Beta'
+  }
+];
+
+export const DEFAULT_RANDOM_EVENT_SETTINGS: RandomEventSettings = {
+  enabled: true,
+  frequency: 'medium', // medium = trigger every ~45-60 seconds randomly
+  intensity: 'medium',
+  selectedCategories: ['communication', 'system', 'environment', 'discovery'],
+  autoTriggerCount: 0
+};
+

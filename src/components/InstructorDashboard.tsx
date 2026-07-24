@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Team, Enigma } from '../types';
-import { GraduationCap, Pause, Play, AlertTriangle, Send, Download, CheckSquare, PlusCircle } from 'lucide-react';
+import { Team, Enigma, RandomEvent, RandomEventSettings } from '../types';
+import { GraduationCap, Pause, Play, AlertTriangle, Send, Download, CheckSquare, PlusCircle, Dices } from 'lucide-react';
 import { soundEngine } from '../lib/audio';
+import { RandomEventsControlPanel } from './RandomEventsControlPanel';
 
 interface InstructorProps {
   teams: Team[];
@@ -9,6 +10,13 @@ interface InstructorProps {
   onToggleEnigmaUnlock: (id: string) => void;
   onTriggerIncident: () => void;
   onSendHintToRadio: (hintText: string) => void;
+  randomEventSettings: RandomEventSettings;
+  activeRandomEvents: RandomEvent[];
+  randomEventHistory: RandomEvent[];
+  onUpdateRandomEventSettings: (newSettings: Partial<RandomEventSettings>) => void;
+  onTriggerRandomEvent: (eventId?: string) => void;
+  onResolveRandomEvent: (eventId: string) => void;
+  onClearRandomEventHistory: () => void;
 }
 
 export const InstructorDashboard: React.FC<InstructorProps> = ({
@@ -16,8 +24,16 @@ export const InstructorDashboard: React.FC<InstructorProps> = ({
   enigmas,
   onToggleEnigmaUnlock,
   onTriggerIncident,
-  onSendHintToRadio
+  onSendHintToRadio,
+  randomEventSettings,
+  activeRandomEvents,
+  randomEventHistory,
+  onUpdateRandomEventSettings,
+  onTriggerRandomEvent,
+  onResolveRandomEvent,
+  onClearRandomEventHistory
 }) => {
+
   const [isPaused, setIsPaused] = useState(false);
   const [customHint, setCustomHint] = useState('');
   const [activityLogs, setActivityLogs] = useState([
@@ -89,7 +105,19 @@ export const InstructorDashboard: React.FC<InstructorProps> = ({
         </div>
       </div>
 
+      {/* Dynamic Random Events Control Panel */}
+      <RandomEventsControlPanel
+        settings={randomEventSettings}
+        activeEvents={activeRandomEvents}
+        eventHistory={randomEventHistory}
+        onUpdateSettings={onUpdateRandomEventSettings}
+        onTriggerRandomEvent={onTriggerRandomEvent}
+        onResolveEvent={onResolveRandomEvent}
+        onClearHistory={onClearRandomEventHistory}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
         {/* Left Column: Team Progress & Activity Logs */}
         <div className="space-y-4">
           {/* Progression par équipe */}

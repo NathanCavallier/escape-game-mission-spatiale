@@ -97,3 +97,45 @@ export interface SafetyIncidentLog {
   description: string;
   correctiveAction: string;
 }
+
+export type RandomEventCategory = 'communication' | 'system' | 'environment' | 'discovery';
+export type RandomEventSeverity = 'info' | 'minor' | 'moderate' | 'critical';
+export type RandomEventEffectCode = 
+  | 'dust_storm' 
+  | 'power_flicker' 
+  | 'radio_corrupt' 
+  | 'sensor_failure' 
+  | 'lunar_discovery' 
+  | 'gravity_anomaly' 
+  | 'solar_flare' 
+  | 'hydraulics_glitch';
+
+export interface RandomEvent {
+  id: string;
+  title: string;
+  icon: string;
+  category: RandomEventCategory;
+  severity: RandomEventSeverity;
+  description: string;
+  impact: string;
+  effectCode: RandomEventEffectCode;
+  targetTeams: Array<'alpha' | 'beta' | 'gamma' | 'delta'> | 'all';
+  durationSeconds: number; // 0 for instant/permanent
+  remainingSeconds: number;
+  active: boolean;
+  timestamp: string;
+  mitigationAction?: string;
+  mitigationCost?: string;
+  scoreBonus?: number;
+  resolved: boolean;
+  triggeredBy: 'auto' | 'manual';
+}
+
+export interface RandomEventSettings {
+  enabled: boolean;
+  frequency: 'off' | 'low' | 'medium' | 'high'; // low = 90s, medium = 45s, high = 25s
+  intensity: 'low' | 'medium' | 'high'; // filter severity
+  selectedCategories: RandomEventCategory[];
+  autoTriggerCount: number;
+}
+
