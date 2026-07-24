@@ -1,0 +1,6 @@
+{
+  "name": "Escape Game - Mission Spatiale",
+  "description": "Simulation d'alunissage d'urgence et mission rover Asteria-3 pour ateliers pédagogiques espace & aéronautique (Collège / Lycée).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
